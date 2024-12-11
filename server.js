@@ -104,7 +104,7 @@ const checkDbConnection = async (req, res, next) => {
   }
 };
 
-// POST route to save user data
+// POST route to save or update user data
 app.post("/user", checkDbConnection, async (req, res) => {
   try {
     const {
@@ -126,15 +126,27 @@ app.post("/user", checkDbConnection, async (req, res) => {
       return res.status(400).json({ error: "Name and email are required." });
     }
 
-    const insertQuery = `
+    const updateQuery = `
       INSERT INTO users (
-        name, email, age, weight, height, gender, 
+        id, name, email, age, weight, height, gender, 
         dailyGoal, wakeupTime, sleepTime, latitude, longitude
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        name = VALUES(name),
+        email = VALUES(email),
+        age = VALUES(age),
+        weight = VALUES(weight),
+        height = VALUES(height),
+        gender = VALUES(gender),
+        dailyGoal = VALUES(dailyGoal),
+        wakeupTime = VALUES(wakeupTime),
+        sleepTime = VALUES(sleepTime),
+        latitude = VALUES(latitude),
+        longitude = VALUES(longitude)
     `;
 
-    const [result] = await dbConnection.query(insertQuery, [
+    await dbConnection.query(updateQuery, [
       name,
       email,
       age,
@@ -149,11 +161,10 @@ app.post("/user", checkDbConnection, async (req, res) => {
     ]);
 
     res.status(200).json({
-      message: "User data saved successfully.",
-      userId: result.insertId,
+      message: "User data updated successfully.",
     });
   } catch (error) {
-    console.error("Error saving user data:", error);
+    console.error("Error updating user data:", error);
     res.status(500).json({
       error: "Internal server error",
       details:
